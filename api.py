@@ -8,43 +8,29 @@ from fastapi.middleware.cors import CORSMiddleware
 # from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 # from accelerate import init_empty_weights, load_checkpoint_and_dispatch
 
-
-MODEL_PATH = {
-    'ChatGLM-6B': 'ChatGLM',
-    'LLaMA-7B': 'LLaMA'
+modelAPI = {
+    'ChatGLM': 'http://localhost:8991',
+    'LLaMA': 'http://localhost:8992',
+    'Bloomz': 'http://localhost:8993'
 }
 
-tokenizer = None
-model = None
-
-
-def _init(num_gpus, model_name):
-    global tokenizer, model
-
-    model_path = MODEL_PATH[model_name]
-    # config = AutoConfig.from_pretrained(model_path, cache_dir='./packages')
-    # tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir='./packages')
-    tokenizer = model_path
-
-    if num_gpus > 1:
-        # with init_empty_weights():
-        #     raw_model = AutoModelForCausalLM._from_config(config, torch_dtype=torch.float16)
-        # raw_model.tie_weights()
-        # model = load_checkpoint_and_dispatch(
-        #     raw_model, model_path, device_map="auto", no_split_module_classes=["MossBlock"], dtype=torch.float16
-        # )
-        pass
-    else:  # on a single gpu
-        # model = AutoModelForCausalLM.from_pretrained(model_path).half().cuda()
-        model = model_path
+dataPath = {
+    'D4-Dialogue': '',
+    'Case-QA': ''
+}
 
 
 app = FastAPI()
 
+res = {
+    'msg': '',
+    'code': 200,
+    'time': ''
+}
+
 # 设置允许跨域请求的来源
 origins = [
-    "http://127.0.0.1:5173",
-    "http://localhost:5173",
+    "http://49.52.10.178:5173",
 ]
 
 # 添加 CORS 中间件
@@ -57,39 +43,16 @@ app.add_middleware(
 )
 
 
-@app.post('/webapi/getAnswer')
-async def get_answer(request: Request):
-    json_raw = await request.json()
-
-    response = {
-        'msg': '模型的回复',
-        'status': 200,
-        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-
-    return response
-
-
 @app.get('/webapi/loadModel')
-async def load_model(model_name, param_size):
-    response = {
-        'msg': '',
-        'status': 200,
-        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-
-    model_name = model_name + '-' + param_size
-    if model_name not in MODEL_PATH:
-        response['msg'] = '模型不存在！'
-        response['status'] = 500
+def load_model(model_a, model_b, data_source):
+    response1 = requests.get(f'{modelAPI[model_a]}/index').json()
+    if response1['code'] == 200:
+        res['msg'] = '模型加载完成'
     else:
-        model_path = MODEL_PATH[model_name]
-        model = model_path
-
-        response['msg'] = model_name + '已加载完成！'
-        response['status'] = 200
-
-    return response
+        res['code'] = 400
+        res['msg'] = '模型加载失败'
+    res['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return res
 
 
 @app.get('/webapi/getRightAnswer')
@@ -117,5 +80,4 @@ async def re_write_answer(request: Request):
 
 
 if __name__ == '__main__':
-    _init(1, 'ChatGLM-6B')
-    uvicorn.run(app, host='0.0.0.0', port=994, workers=1)
+    uvicorn.run(app, host='0.0.0.0', port=8990, workers=1)

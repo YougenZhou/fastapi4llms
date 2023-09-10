@@ -91,8 +91,8 @@ async def submit_input(request: Request):
     json_raw = await request.json()
     session = read_csv('./outputs/session.csv')
     session = session[session['userName'] == user]
-    modelAnswer1 = requests.post(f'{modelAPI[session["model1"].item()]}/submitInput', json_raw)
-    modelAnswer2 = requests.post(f'{modelAPI[session["model2"].item()]}/submitInput', json_raw)
+    modelAnswer1 = requests.post(f'{modelAPI[session["model1"].item()]}/submitInput', json=json_raw)
+    modelAnswer2 = requests.post(f'{modelAPI[session["model2"].item()]}/submitInput', json=json_raw)
     res['data'] = {
         'answer1': modelAnswer1,
         'answer2': modelAnswer2

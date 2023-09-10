@@ -4,20 +4,22 @@ import requests
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-# import torch
-# from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
-# from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+from utils import read_json, read_csv, save_csv
 
 modelAPI = {
     'ChatGLM': 'http://localhost:8991',
     'LLaMA': 'http://localhost:8992',
-    'Bloomz': 'http://localhost:8993'
+    'Bloomz': 'http://localhost:8993',
+    'ChatGPT': 'http://localhost:8894'
 }
 
 dataPath = {
-    'D4-Dialogue': '',
+    'D4-Dialogue': './data/d4/raw_data.json',
     'Case-QA': ''
 }
+
+user = 'zyg'
+process = None
 
 
 app = FastAPI()
@@ -30,7 +32,7 @@ res = {
 
 # 设置允许跨域请求的来源
 origins = [
-    "http://49.52.10.178:5173",
+    "*",
 ]
 
 # 添加 CORS 中间件
@@ -43,15 +45,58 @@ app.add_middleware(
 )
 
 
+@app.get('webapi/login')
+def login(user_name, password):
+    user_list = read_csv()
+
+
 @app.get('/webapi/loadModel')
 def load_model(model_a, model_b, data_source):
     response1 = requests.get(f'{modelAPI[model_a]}/index').json()
-    if response1['code'] == 200:
+    response2 = requests.get(f'{modelAPI[model_b]}/index').json()
+
+    data_path = dataPath[data_source]
+    raw_data = read_json(data_path)
+
+    process = read_csv('./outputs/process.csv')
+    process_id = process[process['username'] == user]['process_id'].item()
+    res['data'] = raw_data[process_id]
+
+    if response1['code'] == 200 and response2['code'] == 200 and raw_data:
         res['msg'] = '模型加载完成'
     else:
         res['code'] = 400
         res['msg'] = '模型加载失败'
     res['time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return res
+
+
+@app.get('/webapi/nextIndex')
+def next_index():
+
+    data_source = process[process['username'] == user]['process_item'].item()
+    data_path = dataPath[data_source]
+    raw_data = read_json(data_path)
+
+    process_id = process[process['username'] == user]['process_id'].item() + 1
+    res['data'] = raw_data[process_id]
+
+    process.loc[process['username'] == user, 'process_id'] = process_id
+    save_csv(process, './outputs/process.csv')
+    return res
+
+
+@app.post('/webapi/submitInput')
+async def submit_input(request: Request):
+    json_raw = await request.json()
+    session = read_csv('./outputs/session.csv')
+    session = session[session['userName'] == user]
+    modelAnswer1 = requests.post(f'{modelAPI[session["model1"].item()]}/submitInput', json_raw)
+    modelAnswer2 = requests.post(f'{modelAPI[session["model2"].item()]}/submitInput', json_raw)
+    res['data'] = {
+        'answer1': modelAnswer1,
+        'answer2': modelAnswer2
+    }
     return res
 
 

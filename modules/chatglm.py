@@ -52,8 +52,7 @@ async def submit_input(requests: Request):
     input_text = json_raw['inputText']
     prompt, history, target = chatglm_example(input_text)
     response, _ = model.chat(tokenizer, prompt, history=history)
-    res['data'] = {'answer': response}
-    return res
+    return response
 
 
 if __name__ == '__main__':

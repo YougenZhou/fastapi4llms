@@ -18,6 +18,21 @@ dataPath = {
     'Case-QA': ''
 }
 
+modelGroup = {
+    'ChatGLMLLaMA': 1,
+    'LLaMAChatGLM': 1,
+    'ChatGLMBloomz': 2,
+    'BloomzChatGLM': 2,
+    'ChatGLMChatGPT': 3,
+    'ChatGPTChatGLM': 3,
+    'LLaMABloomz': 4,
+    'BloomzLLaMA': 4,
+    'LLaMAChatGPT': 5,
+    'ChatGPTLLaMA': 5,
+    'BloomzChatGPT': 6,
+    'ChatGPTBloomz': 6
+}
+
 user = 'zyg'
 process = None
 
@@ -91,8 +106,9 @@ async def submit_input(request: Request):
     json_raw = await request.json()
     session = read_csv('./outputs/session.csv')
     session = session[session['userName'] == user]
-    modelAnswer1 = requests.post(f'{modelAPI[session["model1"].item()]}/submitInput', json=json_raw)
-    modelAnswer2 = requests.post(f'{modelAPI[session["model2"].item()]}/submitInput', json=json_raw)
+    modelAnswer1 = requests.post(f'{modelAPI[session["model1"].item()]}/submitInput', json=json_raw).json()
+    modelAnswer2 = requests.post(f'{modelAPI[session["model2"].item()]}/submitInput', json=json_raw).json()
+    print(modelAnswer1)
     res['data'] = {
         'answer1': modelAnswer1,
         'answer2': modelAnswer2
@@ -100,21 +116,12 @@ async def submit_input(request: Request):
     return res
 
 
-@app.get('/webapi/getRightAnswer')
-def get_right_answer(prompt):
-    print(prompt)
-    response = {
-        'msg': '这是参考答案',
-        'status': 200,
-        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-    return response
-
-
-@app.post('/webapi/reWriteAnswer')
+@app.post('/webapi/submitResult')
 async def re_write_answer(request: Request):
     json_raw = await request.json()
-
+    model_group = json_raw['modelA'] + json_raw['modelB']
+    model_group = modelGroup[model_group]
+    print(model_group)
     response = {
         'msg': '已经提交完成',
         'status': 200,

@@ -47,13 +47,12 @@ async def submit_input(requests: Request):
     json_raw = await requests.json()
     input_text = json_raw['inputText']
     prompt, target = bloom_example(input_text)
-    prompt = tokenizer.encode(prompt, return_tensor='pt').to('cuda')
+    prompt = tokenizer.encode(prompt, return_tensors='pt').to('cuda')
     max_new_token = 256
     response = model.generate(prompt, do_sample=True, temperature=0.2, top_p=0.8, max_new_tokens=max_new_token)
     response = tokenizer.decode(response[0])
     response_str = response.split('doctor：')[-1].strip('</s>')
-    res['data'] = {'answer': response_str}
-    return res
+    return response_str
 
 
 if __name__ == '__main__':
